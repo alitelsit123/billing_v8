@@ -1,0 +1,7 @@
+Start
+Load autoload
+Import Routeros Api
+Import Koneksi
+Querying tbl_pgate
+Get client & server key
+Error Notification Exit 1
