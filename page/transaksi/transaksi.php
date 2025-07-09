@@ -1,4 +1,5 @@
 <?php if ($_SESSION['admin'] || $_SESSION['kasir']) { ?>
+  <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
   <?php
   function tglIndonesia3($str2)
   {
@@ -9,6 +10,12 @@
 
   $conPelanggan = $koneksi->query("SELECT * FROM tbl_penggunamikrotik");
   $checkUser = $conPelanggan->fetch_assoc();
+
+  // Get WhatsApp token for sending invoices
+  $sql_token = "SELECT * FROM tbl_token WHERE id_token = 1";
+  $result_token = mysqli_query($koneksi, $sql_token);
+  $row_token = mysqli_fetch_assoc($result_token);
+  $authorizationToken = $row_token['token'];
 
   if (isset($_POST['filter'])) {
     $bulan = $_POST['bulan'];
@@ -256,7 +263,11 @@
 
                       <td style="color: <?php echo $color ?>"><?php echo $no++; ?></td>
                       <td style="color: <?php echo $color ?>"><?php echo $data['kode_pelanggan'] ?></td>
-                      <td><a target="blank" href="page/transaksi/cetak.php?id_tagihan=<?php echo $data['id_tagihan']; ?>" class="btn btn-info btn-xs" title=""><i class="fa fa-money"></i> Cetak Invoice</a></td>
+                      <td>
+                        <a target="blank" href="page/transaksi/cetak.php?id_tagihan=<?php echo $data['id_tagihan']; ?>" class="btn btn-info btn-xs" title=""><i class="fa fa-money"></i> Cetak Invoice</a>
+                        <br><br>
+                        <a href="" type="button" class="sendInvoiceBtn btn btn-success btn-xs" data-idtagihan="<?php echo $data['id_tagihan']; ?>" data-nohp="<?php echo $no_hp; ?>" data-nama="<?php echo $data['nama_pelanggan']; ?>" data-kode="<?php echo $data['kode_pelanggan'] ?>" data-tagihan="<?php echo $tagihan; ?>" data-invoice="<?php echo $invoice ?>"><i class="fa fa-whatsapp"></i> Send Invoice WA</a>
+                      </td>
                       <td style="color: <?php echo $color ?>"><?php echo $data['nama_pelanggan'] ?></td>
                       <td style="color: <?php echo $color ?>"><?php echo $data['nama_paket'] ?></td>
                       <td style="color: <?php echo $color ?>"><?php echo $bulan ?> / <?php echo $tahun ?></td>
@@ -360,6 +371,148 @@ ORDER BY tb_tagihan.status_bayar ASC");
       </div>
     </div>
   <?php } ?>
+
+  <?php
+  // Handle WhatsApp invoice sending
+  if (isset($_POST['send_invoice_wa'])) {
+    $id_tagihan = $_POST['id_tagihan'];
+    $no_hp = $_POST['no_hp'];
+    $nama_pelanggan = $_POST['nama_pelanggan'];
+    $kode_pelanggan = $_POST['kode_pelanggan'];
+    $tagihan = $_POST['tagihan'];
+    $invoice_url = $_POST['invoice_url'];
+
+    $curl = curl_init();
+
+    $headers = array(
+      'Authorization: ' . $authorizationToken,
+      'Content-Type: application/x-www-form-urlencoded',
+    );
+
+    // Create message content
+    $message = "🧾 *INVOICE TAGIHAN INTERNET*\n\n";
+    $message .= "Kepada Yth,\n";
+    $message .= "Nama: *{$nama_pelanggan}*\n";
+    $message .= "Kode Pelanggan: *{$kode_pelanggan}*\n";
+    $message .= "Tagihan: *Rp {$tagihan}*\n\n";
+    $message .= "Silakan klik link berikut untuk melihat invoice lengkap:\n";
+    $message .= "{$invoice_url}\n\n";
+    $message .= "Terima kasih atas kepercayaan Anda.\n";
+    $message .= "_Pesan ini dikirim otomatis oleh sistem_";
+
+    $data = array(
+      'target' => $no_hp,
+      'message' => $message,
+      'delay' => 2,
+      'countryCode' => '62',
+    );
+
+    $postFields = http_build_query($data);
+
+    curl_setopt_array($curl, array(
+      CURLOPT_URL => 'https://api.fonnte.com/send',
+      CURLOPT_RETURNTRANSFER => true,
+      CURLOPT_ENCODING => '',
+      CURLOPT_MAXREDIRS => 10,
+      CURLOPT_TIMEOUT => 0,
+      CURLOPT_FOLLOWLOCATION => true,
+      CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+      CURLOPT_CUSTOMREQUEST => 'POST',
+      CURLOPT_POSTFIELDS => $postFields,
+      CURLOPT_HTTPHEADER => $headers,
+    ));
+
+    $response = curl_exec($curl);
+    curl_close($curl);
+
+    if ($response) {
+      $message_result = 'Invoice berhasil dikirim ke WhatsApp!';
+      $message_type = 'success';
+    } else {
+      $message_result = 'Gagal mengirim invoice ke WhatsApp!';
+      $message_type = 'error';
+    }
+  ?>
+    <script>
+      alert('<?php echo $message_result; ?>');
+      window.location = '?page=transaksi';
+    </script>
+  <?php
+  }
+  ?>
+
+  <script>
+    $(document).ready(function() {
+      // Handle Send Invoice to WhatsApp button click
+      $('.sendInvoiceBtn').click(function(e) {
+        e.preventDefault();
+
+        var idTagihan = $(this).data('idtagihan');
+        var noHp = $(this).data('nohp');
+        var nama = $(this).data('nama');
+        var kode = $(this).data('kode');
+        var tagihan = $(this).data('tagihan');
+        var invoiceUrl = $(this).data('invoice');
+
+        // Confirm before sending using standard confirm
+        if (confirm('Kirim invoice ke WhatsApp ' + nama + ' (' + noHp + ')?')) {
+          // Show loading message
+          alert('Sedang mengirim invoice ke WhatsApp...');
+
+          // Create form and submit
+          var form = $('<form>', {
+            'method': 'POST',
+            'action': '?page=transaksi'
+          });
+
+          form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'send_invoice_wa',
+            'value': '1'
+          }));
+
+          form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'id_tagihan',
+            'value': idTagihan
+          }));
+
+          form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'no_hp',
+            'value': noHp
+          }));
+
+          form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'nama_pelanggan',
+            'value': nama
+          }));
+
+          form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'kode_pelanggan',
+            'value': kode
+          }));
+
+          form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'tagihan',
+            'value': tagihan
+          }));
+
+          form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'invoice_url',
+            'value': invoiceUrl
+          }));
+
+          $('body').append(form);
+          form.submit();
+        }
+      });
+    });
+  </script>
 
 <?php } else {
   echo "Anda Tidak Berhak Mengakses Halaman Ini";

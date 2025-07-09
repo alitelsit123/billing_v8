@@ -8,6 +8,9 @@ if ($_SESSION['admin'] && isset($_POST['export_data'])) {
   $export_kasir = $_POST['export_kasir'];
   $export_month = $_POST['export_month'];
   $export_year = $_POST['export_year'];
+  $export_date = $_POST['export_date'];
+  $export_date_from = $_POST['export_date_from'];
+  $export_date_to = $_POST['export_date_to'];
   $export_format = $_POST['export_format'];
 
   // Build the query
@@ -37,12 +40,51 @@ if ($_SESSION['admin'] && isset($_POST['export_data'])) {
     $query .= " AND tb_pelanggan.kasir_id = '$export_kasir'";
   }
 
-  if (!empty($export_month)) {
-    $query .= " AND MONTH(tb_kas.tgl_kas) = '$export_month'";
+  // Date filters (using OR logic)
+  $dateConditions = array();
+
+  // Specific date filter
+  if (!empty($export_date)) {
+    $dateConditions[] = "DATE(tb_kas.tgl_kas) = '$export_date'";
   }
 
-  if (!empty($export_year)) {
-    $query .= " AND YEAR(tb_kas.tgl_kas) = '$export_year'";
+  // Month and Year filter (combined)
+  if ((!empty($export_month) || !empty($export_year)) && empty($export_date) && empty($export_date_from) && empty($export_date_to)) {
+    $monthYearConditions = array();
+
+    if (!empty($export_month)) {
+      $monthYearConditions[] = "MONTH(tb_kas.tgl_kas) = '$export_month'";
+    }
+
+    if (!empty($export_year)) {
+      $monthYearConditions[] = "YEAR(tb_kas.tgl_kas) = '$export_year'";
+    }
+
+    if (!empty($monthYearConditions)) {
+      $dateConditions[] = "(" . implode(" AND ", $monthYearConditions) . ")";
+    }
+  }
+
+  // Date range filter
+  if ((!empty($export_date_from) || !empty($export_date_to)) && empty($export_date) && empty($export_month) && empty($export_year)) {
+    $rangeConditions = array();
+
+    if (!empty($export_date_from)) {
+      $rangeConditions[] = "DATE(tb_kas.tgl_kas) >= '$export_date_from'";
+    }
+
+    if (!empty($export_date_to)) {
+      $rangeConditions[] = "DATE(tb_kas.tgl_kas) <= '$export_date_to'";
+    }
+
+    if (!empty($rangeConditions)) {
+      $dateConditions[] = "(" . implode(" AND ", $rangeConditions) . ")";
+    }
+  }
+
+  // Add date conditions to query
+  if (!empty($dateConditions)) {
+    $query .= " AND (" . implode(" OR ", $dateConditions) . ")";
   }
 
   $query .= " ORDER BY tb_kas.tgl_kas DESC";

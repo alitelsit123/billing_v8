@@ -9,7 +9,7 @@
         </div>
         <div class="panel-body">
           <div class="row" style="margin-bottom: 15px;">
-            <div class="col-md-2">
+            <div class="col-md-4">
               <label>Filter Type:</label>
               <select class="form-control" id="filterType">
                 <option value="">-- Semua --</option>
@@ -17,7 +17,7 @@
                 <option value="pengeluaran">Pengeluaran</option>
               </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
               <label>Filter Area:</label>
               <select class="form-control select2" id="filterArea" style="width: 100%;">
                 <option value="">-- Semua Area --</option>
@@ -29,7 +29,7 @@
                 ?>
               </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
               <label>Filter Kasir:</label>
               <select class="form-control select2" id="filterKasir" style="width: 100%;">
                 <option value="">-- Semua Kasir --</option>
@@ -45,6 +45,51 @@
                 }
                 ?>
               </select>
+            </div>
+          </div>
+          <!-- Second row for date filters -->
+          <div class="row" style="margin-bottom: 15px;">
+            <div class="col-md-4">
+              <label>Filter Tanggal:</label>
+              <input type="date" class="form-control" id="filterTanggal" placeholder="Pilih Tanggal">
+            </div>
+            <div class="col-md-4">
+              <label>Filter Bulan:</label>
+              <select class="form-control" id="filterBulan">
+                <option value="">-- Semua Bulan --</option>
+                <option value="01">Januari</option>
+                <option value="02">Februari</option>
+                <option value="03">Maret</option>
+                <option value="04">April</option>
+                <option value="05">Mei</option>
+                <option value="06">Juni</option>
+                <option value="07">Juli</option>
+                <option value="08">Agustus</option>
+                <option value="09">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label>Filter Tahun:</label>
+              <select class="form-control" id="filterTahun">
+                <option value="">-- Semua Tahun --</option>
+                <?php
+                $currentYear = date('Y');
+                for ($year = $currentYear; $year >= ($currentYear - 5); $year--) {
+                  echo "<option value='$year'>$year</option>";
+                }
+                ?>
+              </select>
+            </div>
+            <div class="col-md-12">
+              <label>Filter Rentang Tanggal:</label>
+              <div class="input-group">
+                <input type="date" class="form-control" id="filterTanggalDari" placeholder="Dari">
+                <span class="input-group-addon">s/d</span>
+                <input type="date" class="form-control" id="filterTanggalSampai" placeholder="Sampai">
+              </div>
             </div>
             <div class="col-md-2">
               <label>&nbsp;</label><br>
@@ -369,6 +414,36 @@
                     </div>
                   </div>
 
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label>Tanggal Spesifik</label>
+                        <input type="date" class="form-control" name="export_date" placeholder="Pilih Tanggal">
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label>&nbsp;</label><br>
+                        <small class="text-muted">Kosongkan untuk semua tanggal</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label>Tanggal Dari</label>
+                        <input type="date" class="form-control" name="export_date_from" placeholder="Dari Tanggal">
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label>Tanggal Sampai</label>
+                        <input type="date" class="form-control" name="export_date_to" placeholder="Sampai Tanggal">
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="form-group">
                     <label>Format</label>
                     <select class="form-control" name="export_format" required>
@@ -535,6 +610,11 @@
               var typeFilter = $('#filterType').val();
               var areaFilter = $('#filterArea').val();
               var kasirFilter = $('#filterKasir').val();
+              var tanggalFilter = $('#filterTanggal').val();
+              var bulanFilter = $('#filterBulan').val();
+              var tahunFilter = $('#filterTahun').val();
+              var tanggalDariFilter = $('#filterTanggalDari').val();
+              var tanggalSampaiFilter = $('#filterTanggalSampai').val();
 
               var filteredTotalMasuk = 0;
               var filteredTotalKeluar = 0;
@@ -546,6 +626,38 @@
                 // Skip total and saldo rows
                 if (row.find('td[colspan]').length > 0) {
                   return;
+                }
+
+                // Get date from row (assuming it's in column 2)
+                var tanggalText = row.find('td:nth-child(2)').text().trim();
+                var rowDate = null;
+
+                // Parse Indonesian date format (e.g., "09 Juli 2025")
+                if (tanggalText) {
+                  var monthNames = {
+                    'Januari': '01',
+                    'Februari': '02',
+                    'Maret': '03',
+                    'April': '04',
+                    'Mei': '05',
+                    'Juni': '06',
+                    'Juli': '07',
+                    'Agustus': '08',
+                    'September': '09',
+                    'Oktober': '10',
+                    'November': '11',
+                    'Desember': '12'
+                  };
+
+                  var parts = tanggalText.split(' ');
+                  if (parts.length >= 3) {
+                    var day = parts[0].padStart(2, '0');
+                    var month = monthNames[parts[1]];
+                    var year = parts[2];
+                    if (month) {
+                      rowDate = year + '-' + month + '-' + day;
+                    }
+                  }
                 }
 
                 // Type filter
@@ -578,6 +690,65 @@
 
                   if (kasirText !== selectedKasirText) {
                     showRow = false;
+                  }
+                }
+
+                // Date filters (using OR logic)
+                if (rowDate) {
+                  var dateMatch = false;
+
+                  // Check if any date filter is applied
+                  var hasDateFilters = tanggalFilter || bulanFilter || tahunFilter || tanggalDariFilter || tanggalSampaiFilter;
+
+                  if (hasDateFilters) {
+                    // Specific date filter
+                    if (tanggalFilter && rowDate === tanggalFilter) {
+                      dateMatch = true;
+                    }
+
+                    // Month and Year filter (combined)
+                    if ((bulanFilter || tahunFilter) && !tanggalFilter && !tanggalDariFilter && !tanggalSampaiFilter) {
+                      var monthYearMatch = true;
+
+                      if (bulanFilter) {
+                        var rowMonth = rowDate.split('-')[1];
+                        if (rowMonth !== bulanFilter) {
+                          monthYearMatch = false;
+                        }
+                      }
+
+                      if (tahunFilter) {
+                        var rowYear = rowDate.split('-')[0];
+                        if (rowYear !== tahunFilter) {
+                          monthYearMatch = false;
+                        }
+                      }
+
+                      if (monthYearMatch) {
+                        dateMatch = true;
+                      }
+                    }
+
+                    // Date range filter
+                    if ((tanggalDariFilter || tanggalSampaiFilter) && !tanggalFilter && !bulanFilter && !tahunFilter) {
+                      var rangeMatch = true;
+
+                      if (tanggalDariFilter && rowDate < tanggalDariFilter) {
+                        rangeMatch = false;
+                      }
+                      if (tanggalSampaiFilter && rowDate > tanggalSampaiFilter) {
+                        rangeMatch = false;
+                      }
+
+                      if (rangeMatch) {
+                        dateMatch = true;
+                      }
+                    }
+
+                    // If date filters are applied but no match found, hide row
+                    if (!dateMatch) {
+                      showRow = false;
+                    }
                   }
                 }
 
@@ -637,6 +808,11 @@
               $('#filterType').val('');
               $('#filterArea').val('').trigger('change');
               $('#filterKasir').val('').trigger('change');
+              $('#filterTanggal').val('');
+              $('#filterBulan').val('');
+              $('#filterTahun').val('');
+              $('#filterTanggalDari').val('');
+              $('#filterTanggalSampai').val('');
               $('#example1 tbody tr').show();
 
               // Recalculate original totals
