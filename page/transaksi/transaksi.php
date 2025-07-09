@@ -201,6 +201,7 @@
               LEFT JOIN tbl_rekening ON tbl_buktibayar.id_rekening = tbl_rekening.id_rekening
               LEFT JOIN tb_user ON tb_pelanggan.id_pelanggan = tb_user.id_pelanggan
               WHERE tb_tagihan.bulan_tahun = '$bulantahun'
+              " . (isset($data_user['level']) && $data_user['level'] == 'kasir' ? 'AND tb_pelanggan.kasir_id = ' . $data_user['id'] : '') . "
               ORDER BY tb_tagihan.status_bayar ASC");
 
                   while ($data = $sql->fetch_assoc()) {
