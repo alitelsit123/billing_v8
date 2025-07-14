@@ -24,7 +24,7 @@ if ($ambil_status['status_notifikasi'] === 'aktif') {
     $pesan = $ambil_status['pesan_notifikasi'];
 
     $pesan = str_replace('$nama', $nama, $pesan); // Ganti '$nama' dengan nilai $nama
-    $pesan = preg_replace('/\$jatuh_tempo\b/', $jatuh_tempo, $pesan); // Ganti '$jatuh_tempo' dengan nilai $jatuh_tempo
+    $pesan = preg_replace('/\$jatuh_tempo/', $jatuh_tempo, $pesan); // Ganti '$jatuh_tempo' dengan nilai $jatuh_tempo
     $pesan = str_replace('$tagihan', $tagihan, $pesan); // Ganti '$jatuh_tempo' dengan nilai $jatuh_tempo
     $pesan = str_replace('$no_telp', $no_telp, $pesan); // Ganti '$jatuh_tempo' dengan nilai $jatuh_tempo
 
